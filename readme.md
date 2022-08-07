@@ -1,2 +1,1 @@
-
-![image-rules](./github/rules.png)
+![image-rules](.github/rules.png)
