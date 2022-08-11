@@ -1,4 +1,10 @@
-const { DynamoDBClient, PutItemCommand, GetItemCommand } = require('@aws-sdk/client-dynamodb')
+const {
+  DynamoDBClient,
+  PutItemCommand,
+  GetItemCommand,
+  QueryCommand,
+} = require('@aws-sdk/client-dynamodb')
+
 const { marshall, unmarshall } = require('@aws-sdk/util-dynamodb')
 const { v4: uuid } = require('uuid')
 
@@ -30,7 +36,7 @@ const createUser = async (params) => {
   }
 }
 
-const createTicket = (params) => {
+const createTicket = async (params) => {
   const Item = {
     PK: buildKey(`USER-${params.userName}`),
     SK: buildKey(`TICKET-${uuid()}`),
@@ -60,7 +66,6 @@ const getUser = async (params) => {
       new GetItemCommand({
         Key,
         TableName,
-        ConsistentRead: true,
       })
     )
 
@@ -70,9 +75,55 @@ const getUser = async (params) => {
   }
 }
 
-const getUserTickets = () => {}
+const getUserTickets = async (params) => {
+  const KeyConditionExpression = 'PK = :PK AND begins_with(SK, :SK)'
 
-const getUserAndTickets = () => {}
+  const ExpressionAttributeValues = {
+    ':PK': buildKey(`USER-${params.userName}`),
+    ':SK': buildKey('TICKET-'),
+  }
+
+  try {
+    const response = await dbClient.send(
+      new QueryCommand({
+        TableName,
+        KeyConditionExpression,
+        ExpressionAttributeValues,
+      })
+    )
+
+    return response.Items.map(unmarshall)
+  } catch (err) {
+    console.error({ err })
+  }
+}
+
+const getUserAndTickets = async (params) => {
+  const KeyConditionExpression = 'PK = :PK'
+
+  const ExpressionAttributeValues = {
+    ':PK': buildKey(`USER-${params.userName}`),
+  }
+
+  try {
+    const response = await dbClient.send(
+      new QueryCommand({
+        TableName,
+        KeyConditionExpression,
+        ExpressionAttributeValues,
+      })
+    )
+
+    const [profile, ...tickets] = response.Items.map(unmarshall)
+
+    return {
+      profile,
+      tickets,
+    }
+  } catch (err) {
+    console.error({ err })
+  }
+}
 
 module.exports = {
   getUser,
