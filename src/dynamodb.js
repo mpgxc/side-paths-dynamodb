@@ -1,7 +1,8 @@
-const { DynamoDBClient, PutItemCommand } = require('@aws-sdk/client-dynamodb')
+const { DynamoDBClient, PutItemCommand, GetItemCommand } = require('@aws-sdk/client-dynamodb')
+const { marshall, unmarshall } = require('@aws-sdk/util-dynamodb')
 const { v4: uuid } = require('uuid')
 
-const client = new DynamoDBClient({
+const dbClient = new DynamoDBClient({
   region: 'us-east-1',
 })
 
@@ -10,39 +11,15 @@ const buildKey = (param) => ({
   S: `${param}`,
 })
 
-const parseParams = (param) =>
-  ({
-    string: { S: param },
-
-    /**
-     * Resolvendo problema da conversão de números
-     * https://stackoverflow.com/questions/71488712/number-value-cannot-be-converted-to-string-when-updating-item
-     * */
-
-    number: { N: `${param}` },
-    boolean: { BOOL: param },
-    object: { M: param },
-    array: { L: param },
-    null: { NULL: param },
-  }[typeof param])
-
-const buildParams = (params) =>
-  Object.assign(
-    {},
-    ...Object.keys(params).map((index) => ({
-      [index]: parseParams(params[index]),
-    }))
-  )
-
 const createUser = async (params) => {
   const Item = {
     PK: buildKey(`USER-${params.userName}`),
     SK: buildKey(`PROFILE-${params.userName}`),
-    ...buildParams(params),
+    ...marshall(params),
   }
 
   try {
-    return client.send(
+    return dbClient.send(
       new PutItemCommand({
         Item,
         TableName,
@@ -57,11 +34,11 @@ const createTicket = (params) => {
   const Item = {
     PK: buildKey(`USER-${params.userName}`),
     SK: buildKey(`TICKET-${uuid()}`),
-    ...buildParams(params),
+    ...marshall(params),
   }
 
   try {
-    return client.send(
+    return dbClient.send(
       new PutItemCommand({
         Item,
         TableName,
@@ -72,16 +49,35 @@ const createTicket = (params) => {
   }
 }
 
-const getUser = () => {}
+const getUser = async (params) => {
+  const Key = {
+    PK: buildKey(`USER-${params.userName}`),
+    SK: buildKey(`PROFILE-${params.userName}`),
+  }
+
+  try {
+    const response = await dbClient.send(
+      new GetItemCommand({
+        Key,
+        TableName,
+        ConsistentRead: true,
+      })
+    )
+
+    return unmarshall(response.Item)
+  } catch (err) {
+    console.error({ err })
+  }
+}
 
 const getUserTickets = () => {}
 
 const getUserAndTickets = () => {}
 
 module.exports = {
+  getUser,
   createUser,
   createTicket,
-  getUser,
   getUserTickets,
   getUserAndTickets,
 }
