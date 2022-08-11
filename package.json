@@ -5,7 +5,7 @@
   "main": "dynamodb.js",
   "scripts": {
     "start": "",
-    "dev": "node ./src/dynamodb.js",
+    "dev": "node ./src/main.js",
     "lint": "eslint ./src --ext .json --ext .js --fix"
   },
   "keywords": [
@@ -16,7 +16,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@aws-sdk/client-dynamodb": "^3.145.0"
+    "@aws-sdk/client-dynamodb": "^3.145.0",
+    "uuid": "^8.3.2"
   },
   "devDependencies": {
     "eslint": "^4.19.1",

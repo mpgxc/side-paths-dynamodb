@@ -1,16 +1,13 @@
 const { DynamoDBClient, PutItemCommand } = require('@aws-sdk/client-dynamodb')
+const { v4: uuid } = require('uuid')
 
 const client = new DynamoDBClient({
   region: 'us-east-1',
 })
 
 const TableName = 'application-table'
-const buildPartitionKey = (param) => ({
-  S: `USER-${param}`,
-})
-
-const buildSortKey = (param) => ({
-  S: `PROFILE-${param}`,
+const buildKey = (param) => ({
+  S: `${param}`,
 })
 
 const parseParams = (param) =>
@@ -39,8 +36,8 @@ const buildParams = (params) =>
 
 const createUser = async (params) => {
   const Item = {
-    PK: buildPartitionKey(params.userName),
-    SK: buildSortKey(params.userName),
+    PK: buildKey(`USER-${params.userName}`),
+    SK: buildKey(`PROFILE-${params.userName}`),
     ...buildParams(params),
   }
 
@@ -56,15 +53,24 @@ const createUser = async (params) => {
   }
 }
 
-createUser({
-  address: 'Rua. Paulo Bernardino',
-  email: 'garcia@email.com',
-  fullName: 'Mateus Garcia',
-  userName: 'mpgxc',
-  age: 26,
-}).then()
+const createTicket = (params) => {
+  const Item = {
+    PK: buildKey(`USER-${params.userName}`),
+    SK: buildKey(`TICKET-${uuid()}`),
+    ...buildParams(params),
+  }
 
-const createTicket = () => {}
+  try {
+    return client.send(
+      new PutItemCommand({
+        Item,
+        TableName,
+      })
+    )
+  } catch (err) {
+    console.error({ err })
+  }
+}
 
 const getUser = () => {}
 
